@@ -11,7 +11,7 @@ function Bridge.getPlayerInfo()
         jobLabel = player.job?.label or player.job?.name or "",
         callsign = player.metadata?.callsign or "",
         img = player.charinfo?.image or "user.jpg",
-        isBoss = player.job?.grade?.level == 10 -- QBX Core'da genellikle en yüksek grade boss olur
+        isBoss = player.job?.grade?.level == 10
     }
 end
 
@@ -57,7 +57,6 @@ function Bridge.getRanks(job)
         }
     end
 
-    -- Grade'leri sıralı hale getir (QBX Core'da grades tablosu sıralı değildir)
     table.sort(options, function(a, b)
         return tonumber(a.value) < tonumber(b.value)
     end)
