@@ -1,7 +1,6 @@
 local QBCore = exports['qb-core']:GetCoreObject()
 local Bridge = {}
 
--- Yardımcı fonksiyonlar
 local function getPlayerSource(citizenid)
     local players = QBCore.Functions.GetQBPlayers()
     for _, player in pairs(players) do
@@ -40,7 +39,6 @@ local function queryDatabaseProfiles(first, last)
     return profiles
 end
 
--- Ana fonksiyonlar
 function Bridge.nameSearch(src, first, last)
     local player = QBCore.Functions.GetPlayer(src)
     if not player or not config.policeAccess[player.PlayerData.job.name] then return false end
@@ -91,7 +89,6 @@ function Bridge.getPlayerInfo(src)
     }
 end
 
--- Araç işlemleri
 local function getVehicleCharacter(owner)
     local result = MySQL.query.await("SELECT * FROM players WHERE citizenid = ?", {owner})
     if not result or not result[1] then return nil end
@@ -124,7 +121,7 @@ local function queryDatabaseVehicles(find, findData)
             model = QBCore.Shared.Vehicles[item.vehicle]?.name or "Unknown",
             plate = item.plate,
             class = QBCore.Shared.Vehicles[item.vehicle]?.category or "0",
-            stolen = false, -- QBX Core'da bu özellik genelde yok
+            stolen = false,
             character = character
         }
     end
@@ -140,7 +137,6 @@ function Bridge.viewVehicles(src, searchBy, data)
     return queryDatabaseVehicles(searchBy, data)
 end
 
--- Diğer fonksiyonlar
 function Bridge.getProperties(citizenid)
     if GetResourceState("qb-houses") ~= "started" then return {} end
     
@@ -189,24 +185,21 @@ function Bridge.editPlayerLicense(source, citizenid, licenseIdentifier, newLicen
 end
 
 function Bridge.createInvoice(citizenid, amount)
-    -- exports['qb-phone']:CreateInvoice(citizenid, amount, "Government Fine", "police")
+    exports['qb-phone']:CreateInvoice(citizenid, amount, "Government Fine", "police")
 end
 
 function Bridge.vehicleStolen(id, stolen, plate)
-    -- QBX Core'da doğrudan stolen özelliği yok, gerekirse özel bir metadata eklenebilir
     MySQL.update.await("UPDATE player_vehicles SET stolen = ? WHERE id = ?", {stolen, id })
 end
 
 function Bridge.getStolenVehicles()
     local plates = {}
     
-    -- Stolen olarak işaretlenmiş araçlar
     local result = MySQL.query.await("SELECT plate FROM player_vehicles WHERE stolen")
     for i=1, #result do
         plates[#plates+1] = result[i].plate
     end
-    
-    -- BOLO'lar
+
     local bolos = MySQL.query.await("SELECT `data` FROM `nd_mdt_bolos` WHERE `type` = 'vehicle'")
     for i=1, #bolos do
         local veh = bolos[i]
@@ -252,7 +245,6 @@ function Bridge.getRecords(citizenid)
     return json.decode(result[1].records), true
 end
 
--- Çalışan yönetimi fonksiyonları
 function Bridge.viewEmployees(src, search)
     local Player = QBCore.Functions.GetPlayer(src)
     if not Player or not config.policeAccess[Player.PlayerData.job.name] then return {} end
@@ -269,7 +261,6 @@ function Bridge.viewEmployees(src, search)
         local job = info.job
         local metadata = json.decode(info.metadata or '{}')
         
-        -- Sadece polis/ems çalışanlarını listele
         if config.policeAccess[job] then
             local toSearch = ("%s %s %s"):format(
                 charinfo.firstname:lower(),
@@ -316,7 +307,6 @@ function Bridge.employeeUpdateCallsign(src, citizenid, callsign)
     
     if not tonumber(callsign) then return false, "Callsign must be a number" end
     
-    -- Yetki kontrolü
     local targetPlayer = QBCore.Functions.GetPlayerByCitizenId(citizenid)
     if targetPlayer then
         if Player.PlayerData.job.grade.level <= targetPlayer.PlayerData.job.grade.level then
@@ -331,7 +321,6 @@ function Bridge.employeeUpdateCallsign(src, citizenid, callsign)
         end
     end
     
-    -- Callsign güncelleme
     if targetPlayer then
         local metadata = targetPlayer.PlayerData.metadata
         metadata.callsign = callsign
@@ -359,12 +348,10 @@ function Bridge.updateEmployeeRank(src, update)
     local targetPlayer = QBCore.Functions.GetPlayerByCitizenId(update.charid)
     if not targetPlayer then return false, "Employee not found" end
     
-    -- Yetki kontrolü
     if Player.PlayerData.job.grade.level <= targetPlayer.PlayerData.job.grade.level then
         return false, "You can't promote to higher rank than yourself"
     end
     
-    -- Rütbe güncelleme
     targetPlayer.Functions.SetJob(update.job, update.newRank)
     return QBCore.Shared.Jobs[update.job]?.grades[update.newRank]?.name or "Rank "..update.newRank
 end
@@ -376,12 +363,10 @@ function Bridge.removeEmployeeJob(src, citizenid)
     local targetPlayer = QBCore.Functions.GetPlayerByCitizenId(citizenid)
     if not targetPlayer then return false, "Employee not found" end
     
-    -- Yetki kontrolü
     if Player.PlayerData.job.grade.level <= targetPlayer.PlayerData.job.grade.level then
         return false, "You can't remove equal or higher rank employees"
     end
     
-    -- İşten çıkarma
     targetPlayer.Functions.SetJob("unemployed", 0)
     return true
 end
